@@ -16,12 +16,25 @@ async function fetchJobs(): Promise<Job[]> {
   return data?.map((r: any) => ({ id: r.id, name: r.name, wage: r.wage, color: r.color, position: r.position })) || [];
 }
 async function fetchEntries(): Promise<{ active: Entry[]; trash: Entry[] }> {
+  // created_at で降順に取得
   const { data } = await db().from('entries').select('*').order('created_at', { ascending: false });
+
   if (!data) return { active: [], trash: [] };
+
   const all: Entry[] = data.map((r: any) => ({
-    id: r.id, jobId: r.job_id, jobName: r.job_name, hours: Number(r.hours), wage: r.wage, income: r.income,
-    transport: r.transport, memo: r.memo, date: r.date, deleted: r.deleted, deletedAt: r.deleted_at ?? undefined,
+    id: Number(r.id), // 明示的に数値変換
+    jobId: r.job_id,
+    jobName: r.job_name,
+    hours: Number(r.hours),
+    wage: r.wage,
+    income: r.income,
+    transport: r.transport,
+    memo: r.memo,
+    date: r.date,
+    deleted: r.deleted,
+    deletedAt: r.deleted_at ?? undefined,
   }));
+
   return { active: all.filter(e => !e.deleted), trash: all.filter(e => e.deleted) };
 }
 async function upsertJobs(jobs: Job[]) {
@@ -62,13 +75,49 @@ export function useStore() {
   const addEntry = useCallback(async (jobId: string, hours: number, transport: number, memo: string) => {
     const job = state.jobs.find(j => j.id === jobId);
     if (!job) return;
-    const entry: Entry = {
-      id: Date.now(), jobId, jobName: job.name, hours, wage: job.wage, income: Math.round(job.wage * hours),
-      transport, memo, date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }), deleted: false,
-    };
+
     const uid = getUserId();
-    await db().from('entries').insert({ ...entry, user_id: uid, job_id: jobId, job_name: job.name });
-    setState(prev => ({ ...prev, entries: [entry, ...prev.entries] }));
+
+    // 保存失敗を防ぐため、DBの型に厳密に合わせる
+    const { data, error } = await db()
+      .from('entries')
+      .insert({
+        user_id: uid,
+        job_id: jobId,
+        job_name: job.name,
+        hours: hours, // numeric
+        wage: job.wage, // integer
+        income: Math.round(job.wage * hours), // integer
+        transport: transport || 0, // integer
+        memo: memo || '', // text
+        date: new Date().toISOString().split('T')[0], // yyyy-mm-dd
+        deleted: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase Error:", error);
+      alert(`保存に失敗しました: ${error.message}`);
+      return;
+    }
+
+    if (data) {
+      // DBから返ってきた本物の ID を使って state を更新
+      const entry: Entry = {
+        id: data.id,
+        jobId: data.job_id,
+        jobName: data.job_name,
+        hours: Number(data.hours),
+        wage: data.wage,
+        income: data.income,
+        transport: data.transport,
+        memo: data.memo,
+        date: data.date,
+        deleted: data.deleted
+      };
+      setState(prev => ({ ...prev, entries: [entry, ...prev.entries] }));
+    }
   }, [state.jobs])
 
   const deleteEntry = useCallback(async (id: number) => {
@@ -95,7 +144,7 @@ export function useStore() {
     const job = deletedJobs.find(j => j.id === jobId);
     if (!job) return;
     if (state.jobs.some(j => j.name === job.name)) { alert("同名のバイトがあるため復旧不可"); return; }
-    
+
     await upsertJobs([job]);
     await removeDeletedJob(jobId);
 
@@ -110,7 +159,7 @@ export function useStore() {
       if (restoreEntries) {
         const toRestore = prev.trash.filter(e => e.jobName === job.name + '（削除済み）');
         const restored = toRestore.map(e => ({ ...e, jobId: job.id, jobName: job.name, deleted: false, deletedAt: undefined }));
-        newEntries = [...restored, ...newEntries].sort((a,b) => b.id - a.id);
+        newEntries = [...restored, ...newEntries].sort((a, b) => b.id - a.id);
         newTrash = prev.trash.filter(e => e.jobName !== job.name + '（削除済み）');
       }
       return { ...prev, jobs: [...prev.jobs, job].sort((a, b) => a.position - b.position), entries: newEntries, trash: newTrash };
@@ -177,9 +226,38 @@ export function useStore() {
     await upsertJobs(updated);
     setState(prev => ({ ...prev, jobs: updated }));
   }, [state.jobs, deletedJobs])
+  const updateEntry = useCallback(async (id: number, jobId: string, hours: number, transport: number, memo: string) => {
+    const job = state.jobs.find(j => j.id === jobId);
+    if (!job) return;
 
+    const income = Math.round(job.wage * hours);
+    // DB更新
+    const { error } = await db()
+      .from('entries')
+      .update({
+        job_id: jobId,
+        job_name: job.name,
+        hours,
+        income,
+        transport,
+        memo
+      })
+      .eq('id', id);
+
+    if (error) {
+      alert("更新に失敗しました");
+    } else {
+      // State更新
+      setState(prev => ({
+        ...prev,
+        entries: prev.entries.map(e => e.id === id ? {
+          ...e, jobId, jobName: job.name, hours, income, transport, memo
+        } : e)
+      }));
+    }
+  }, [state.jobs]);
   return {
     state, loading, deletedJobs, addEntry, deleteEntry, archiveAllEntries, restoreFromTrash, hardDelete,
-    emptyTrashEntries, addJob, removeJob, hardDeleteJob, hardDeleteAllJobs, undoRemoveJob, updateJob, JOB_COLORS,
+    emptyTrashEntries, addJob, removeJob, hardDeleteJob, hardDeleteAllJobs, undoRemoveJob, updateJob, JOB_COLORS, updateEntry
   }
 }

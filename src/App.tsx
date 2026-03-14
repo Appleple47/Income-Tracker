@@ -19,7 +19,7 @@ export default function App() {
   const {
     state, loading, deletedJobs, addEntry, deleteEntry, restoreFromTrash,
     hardDelete, emptyTrashEntries, archiveAllEntries, addJob, removeJob,
-    undoRemoveJob, updateJob, hardDeleteJob, hardDeleteAllJobs
+    undoRemoveJob, updateJob, hardDeleteJob, hardDeleteAllJobs, updateEntry
   } = useStore()
 
   const showToast = useCallback((message: string, type: ToastType = 'success', onUndo?: () => void) => {
@@ -203,21 +203,12 @@ export default function App() {
         ) : (
           <div className="fade-in">
             {tab === 'input' && (
-              // <InputPanel
-              //   jobs={state.jobs}
-              //   entries={state.entries}
-              //   trash={state.trash}
-              //   onAdd={handleAddEntry}
-              //   onUpdate={() => { }} // Store側に updateEntry があればここに入れる
-              //   onDelete={handleDeleteEntry}
-              //   onClear={archiveAllEntries}
-              // />
               <InputPanel
                 jobs={state.jobs}
                 entries={state.entries}
                 trash={state.trash}
                 onAdd={handleAddEntry}
-                onUpdate={() => { }}
+                onUpdate={updateEntry}
                 onDelete={handleDeleteEntry}
                 onClear={archiveAllEntries}
                 onDeleteSelected={(ids) => {
