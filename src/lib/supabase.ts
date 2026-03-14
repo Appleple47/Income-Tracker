@@ -1,10 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js' // @supabase-client ではなく @supabase-js が一般的
 
-const SUPABASE_URL = 'https://wnkximddleuqiejbtiai.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indua3hpbWRkbGV1cWllamJ0aWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjg5NjAsImV4cCI6MjA4ODkwNDk2MH0.1OJOgkYme4c-JcIrMi9C8nt1ykoW1RoZsSEKrN9AUgM'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const USER_ID_KEY = 'baito_user_id'
 
+// User ID を取得・生成する関数
 export function getUserId(): string {
   let id = localStorage.getItem(USER_ID_KEY)
   if (!id) {
@@ -18,8 +19,9 @@ export function setUserId(id: string) {
   localStorage.setItem(USER_ID_KEY, id)
 }
 
-// user_idをヘッダーに載せるカスタムfetch
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// クライアントの初期化（一度だけ宣言する）
+// global headers に載せることで、すべてのリクエストに自動で x-user-id が付与されます
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'x-user-id': getUserId(),
@@ -27,9 +29,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 })
 
-// user_idヘッダーを動的に更新するヘルパー
+/**
+ * もしユーザーIDが途中で変わる可能性があるなら（setUserId後など）、
+ * 常に最新のヘッダーを持つクライアントを返す関数
+ */
 export function getSupabaseWithUser() {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: { 'x-user-id': getUserId() },
     },
