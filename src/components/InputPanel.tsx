@@ -79,7 +79,22 @@ export function InputPanel({ jobs, entries, onAdd, onClear, onUpdate, onDeleteSe
               <input type="number" min="0" max="59" onKeyDown={blockInvalidChar} className="form-control text-center" style={{ width: 60 }} value={m} onChange={e => setM(e.target.value)} placeholder="00" />分
             </div>
           </div>
-          <div className="col-12"> {/* メモを12列にして広く使う */}
+          <div className="col-12">
+            <span className="fw-bold small text-secondary">交通費</span>
+            <div className="input-group">
+              <span className="input-group-text">¥</span>
+              <input
+                type="number"
+                min="0"
+                onKeyDown={blockInvalidChar}
+                className="form-control"
+                value={transport}
+                onChange={e => setTransport(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="col-12">
             <span className="fw-bold small text-secondary">メモ</span>
             <textarea
               className="form-control"
