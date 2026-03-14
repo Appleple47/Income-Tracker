@@ -79,11 +79,15 @@ export function InputPanel({ jobs, entries, onAdd, onClear, onUpdate, onDeleteSe
               <input type="number" min="0" max="59" onKeyDown={blockInvalidChar} className="form-control text-center" style={{ width: 60 }} value={m} onChange={e => setM(e.target.value)} placeholder="00" />分
             </div>
           </div>
-          <div className="col-6"><span className="fw-bold small text-secondary">交通費</span>
-            <input type="number" min="0" onKeyDown={blockInvalidChar} className="form-control" value={transport} onChange={e => setTransport(e.target.value)} />
-          </div>
-          <div className="col-6"><span className="fw-bold small text-secondary">メモ</span>
-            <input type="text" className="form-control" value={memo} onChange={e => setMemo(e.target.value)} />
+          <div className="col-12"> {/* メモを12列にして広く使う */}
+            <span className="fw-bold small text-secondary">メモ</span>
+            <textarea
+              className="form-control"
+              rows={2}
+              value={memo}
+              onChange={e => setMemo(e.target.value)}
+              placeholder="勤務日、勤務内容..."
+            />
           </div>
           <button className={`btn w-100 py-2 fw-bold ${editingId ? 'btn-primary' : 'btn-dark'}`} onClick={handleSave}>{editingId ? '変更を保存' : '記録を保存'}</button>
           {editingId && <button className="btn btn-link text-secondary btn-sm" onClick={() => setEditingId(null)}>キャンセル</button>}
@@ -125,7 +129,62 @@ export function InputPanel({ jobs, entries, onAdd, onClear, onUpdate, onDeleteSe
             onClick={() => isEditMode ? null : startEditing(e)}
             style={{ cursor: isEditMode ? 'default' : 'pointer' }}
           >
-            <div className="card-body p-3 d-flex align-items-center gap-3">
+            <div className="card-body p-3 d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+              {isEditMode && (
+                <input
+                  type="checkbox"
+                  className="form-check-input m-0"
+                  checked={selectedIds.includes(e.id)}
+                  onChange={() => { }}
+                  onClick={(event) => toggleSelect(e.id, event)}
+                />
+              )}
+
+              {/* 左側の色棒：heightを100%に近い状態にし、flex-shrinkを0にして潰れないようにする */}
+              <div
+                style={{
+                  width: 4,
+                  alignSelf: 'stretch', // 親の高さに合わせる
+                  background: jobs.find(j => j.id === e.jobId)?.color || '#dee2e6',
+                  borderRadius: 2,
+                  flexShrink: 0
+                }}
+              />
+
+              {/* テキスト部分：minWidth: 0 を入れることで ellipsis が効くようになる */}
+              <div
+                className="flex-grow-1"
+                style={{ minWidth: 0 }}
+                onClick={(event) => isEditMode && toggleSelect(e.id, event)}
+              >
+                <div className="d-flex justify-content-between align-items-start">
+                  <div className="fw-bold small text-truncate">{e.jobName}</div>
+                  <div className="text-muted" style={{ fontSize: '0.75rem' }}>{e.date}</div>
+                </div>
+
+                <div className="fw-bold my-1">
+                  ¥{(e.income + e.transport).toLocaleString()}
+                  <span className="text-muted fw-normal ms-2" style={{ fontSize: '0.7rem' }}>
+                    (内訳: 収入¥{e.income.toLocaleString()} + 交通¥{e.transport.toLocaleString()})
+                  </span>
+                </div>
+
+                {e.memo && (
+                  <div
+                    className="text-muted small"
+                    style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block'
+                    }}
+                  >
+                    <i className="bi bi-chat-left-text me-1"></i>{e.memo}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* <div className="card-body p-3 d-flex align-items-center gap-3">
               {isEditMode && (
                 <input
                   type="checkbox"
@@ -138,9 +197,20 @@ export function InputPanel({ jobs, entries, onAdd, onClear, onUpdate, onDeleteSe
               <div style={{ width: 4, height: 30, background: jobs.find(j => j.id === e.jobId)?.color || '#eee', borderRadius: 2 }} />
               <div className="flex-grow-1" onClick={(event) => isEditMode && toggleSelect(e.id, event)}>
                 <div className="fw-bold small">{e.jobName}</div>
-                <div className="text-muted small">{e.date} · ¥{e.income.toLocaleString()}</div>
+                <div className="text-muted small">¥{(e.income + e.transport).toLocaleString()} (収入¥{e.income}＋交通費¥{e.transport})</div>
+                <div className="text-muted small">追加日: {e.date}</div>
+                <div
+                  className="text-muted small"
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  メモ: {e.memo}
+                </div>
               </div>
-            </div>
+            </div> */}
           </div>
         ))}
       </div>
