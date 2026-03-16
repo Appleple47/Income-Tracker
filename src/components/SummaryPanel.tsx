@@ -146,9 +146,9 @@ export function SummaryPanel({ jobs, entries, onAddJob, onRemoveJob, onUpdateJob
                   <div className="h5 fw-bold mb-0">¥{(jobIncome + jobTransport).toLocaleString()}</div>
 
                   <div className="d-flex flex-column" style={{ fontSize: '10px' }}>
-                    {jobTransport > 0 && (
+                    {jobIncome + jobTransport > 0 && (
                       <span className="text-muted">
-                        収入(¥{jobIncome})＋交通費(¥{jobTransport.toLocaleString()})
+                        収入(¥{jobIncome.toLocaleString()})＋交通費(¥{jobTransport.toLocaleString()})
                       </span>
                     )}
                     <span className="text-primary fw-bold">
